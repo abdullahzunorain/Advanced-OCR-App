@@ -1,81 +1,36 @@
+import streamlit as st
+import requests
 from PIL import Image
-from transformers import AutoTokenizer, AutoModel, AutoImageProcessor, AutoModelForCausalLM
-from transformers.generation.configuration_utils import GenerationConfig
-from transformers.generation import LogitsProcessorList, PrefixConstrainedLogitsProcessor, UnbatchedClassifierFreeGuidanceLogitsProcessor
-import torch
+from io import BytesIO
 
-import sys
-sys.path.append(PATH_TO_BAAI_Emu3-Gen_MODEL)
-from processing_emu3 import Emu3Processor
+# Function to call the Hugging Face API
+def call_hugging_face_api(image):
+    api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"  # Update with your model's API URL
+    headers = {"Authorization": f"Bearer YOUR_HUGGING_FACE_API_TOKEN"}
+    # Prepare the image for sending
+    image_data = image.convert("RGB")
+    buffered = BytesIO()
+    image_data.save(buffered, format="JPEG")
+    image_bytes = buffered.getvalue()
 
-# model path
-EMU_HUB = "BAAI/Emu3-Gen"
-VQ_HUB = "BAAI/Emu3-VisionTokenizer"
+    # Send a POST request to the Hugging Face API
+    response = requests.post(api_url, headers=headers, files={"file": image_bytes})
+    return response.json()  # Return the API response as JSON
 
-# prepare model and processor
-model = AutoModelForCausalLM.from_pretrained(
-    EMU_HUB,
-    device_map="cuda:0",
-    torch_dtype=torch.bfloat16,
-    attn_implementation="flash_attention_2",
-    trust_remote_code=True,
-)
+# Streamlit app
+st.title("Hugging Face Model Integration")
 
-tokenizer = AutoTokenizer.from_pretrained(EMU_HUB, trust_remote_code=True)
-image_processor = AutoImageProcessor.from_pretrained(VQ_HUB, trust_remote_code=True)
-image_tokenizer = AutoModel.from_pretrained(VQ_HUB, device_map="cuda:0", trust_remote_code=True).eval()
-processor = Emu3Processor(image_processor, image_tokenizer, tokenizer)
+uploaded_file = st.file_uploader("Upload an Image", type=["png", "jpg", "jpeg"])
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-# prepare input with more descriptive prompt
-POSITIVE_PROMPT = " masterpiece, film grained, best quality."
-NEGATIVE_PROMPT = "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry."
-
-classifier_free_guidance = 3.0
-prompt = "a portrait of a young girl with long brown hair, wearing a blue dress, in a sunny field with flowers."
-prompt += POSITIVE_PROMPT
-
-kwargs = dict(
-    mode='G',
-    ratio="1:1",
-    image_area=model.config.image_area,
-    return_tensors="pt",
-)
-pos_inputs = processor(text=prompt, **kwargs)
-neg_inputs = processor(text=NEGATIVE_PROMPT, **kwargs)
-
-# prepare hyper parameters
-GENERATION_CONFIG = GenerationConfig(
-    use_cache=True,
-    eos_token_id=model.config.eos_token_id,
-    pad_token_id=model.config.pad_token_id,
-    max_new_tokens=40960,
-    do_sample=True,
-    top_k=2048,
-)
-
-h, w = pos_inputs.image_size[0]
-constrained_fn = processor.build_prefix_constrained_fn(h, w)
-logits_processor = LogitsProcessorList([
-    UnbatchedClassifierFreeGuidanceLogitsProcessor(
-        classifier_free_guidance,
-        model,
-        unconditional_ids=neg_inputs.input_ids.to("cuda:0"),
-    ),
-    PrefixConstrainedLogitsProcessor(
-        constrained_fn,
-        num_beams=1,
-    ),
-])
-
-# generate
-outputs = model.generate(
-    pos_inputs.input_ids.to("cuda:0"),
-    GENERATION_CONFIG,
-    logits_processor=logits_processor
-)
-
-mm_list = processor.decode(outputs[0])
-for idx, im in enumerate(mm_list):
-    if not isinstance(im, Image.Image):
-        continue
-    im.save(f"result_{idx}.png")
+    if st.button("Generate"):
+        with st.spinner("Generating..."):
+            result = call_hugging_face_api(image)
+            # Display results (assuming the response contains image URLs)
+            if 'generated_images' in result:
+                for idx, img_url in enumerate(result['generated_images']):
+                    st.image(img_url, caption=f"Generated Image {idx + 1}", use_column_width=True)
+            else:
+                st.error("Error: " + str(result))

@@ -3,7 +3,8 @@ from PIL import Image
 import numpy as np
 import cv2
 import easyocr
-from transformers import DonutProcessor, VisionEncoderDecoderModel
+# from transformers import DonutProcessor, VisionEncoderDecoderModel
+from transformers import LayoutLMv3Processor, LayoutLMv3ForTokenClassification
 
 # Preprocess the Image: Grayscale, Thresholding, and Noise Removal
 def preprocess_image(image):
@@ -18,17 +19,31 @@ def extract_text_easyocr(image):
     result = reader.readtext(np.array(image), detail=0)
     return " ".join(result)
 
-# OCR with Hugging Face's Donut Model
+
+
+# OCR with Hugging Face LayoutLMv3 (Free Pretrained Model)
 def extract_text_huggingface(image):
-    processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base")
-    model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base")
+    processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base")
+    model = LayoutLMv3ForTokenClassification.from_pretrained("microsoft/layoutlmv3-base")
+
+    # Convert the image to RGB format
+    image = image.convert("RGB")
     
-    pixel_values = processor(image, return_tensors="pt").pixel_values
-    task_prompt = "<s_cord-v2>"
+    # Prepare the image for LayoutLMv3
+    encoding = processor(images=image, return_tensors="pt")
     
-    outputs = model.generate(pixel_values, max_length=512, num_beams=3, early_stopping=True)
-    extracted_text = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+    # Inference
+    with torch.no_grad():
+        outputs = model(**encoding)
+    
+    # Decode the predicted tokens to get text
+    tokens = torch.argmax(outputs.logits, dim=-1).tolist()[0]
+    
+    # Convert token IDs back to words
+    extracted_text = processor.tokenizer.decode(tokens)
+    
     return extracted_text
+    
 
 # Streamlit App
 st.title("Advanced OCR Text Extraction App")

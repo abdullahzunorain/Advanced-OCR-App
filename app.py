@@ -2,15 +2,16 @@ import streamlit as st
 import requests
 from PIL import Image
 from io import BytesIO
+import os
 
 # Function to call the Hugging Face API
 def call_hugging_face_api(image):
     api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"  # Update with your model's API URL
-    headers = {"Authorization": f"Bearer YOUR_HUGGING_FACE_API_TOKEN"}
+    headers = {"Authorization": f"Bearer {os.getenv('HUGGING_FACE_API_TOKEN')}"}  # Use environment variable for token
+
     # Prepare the image for sending
-    image_data = image.convert("RGB")
     buffered = BytesIO()
-    image_data.save(buffered, format="JPEG")
+    image.save(buffered, format="JPEG")
     image_bytes = buffered.getvalue()
 
     # Send a POST request to the Hugging Face API
@@ -28,6 +29,7 @@ if uploaded_file is not None:
     if st.button("Generate"):
         with st.spinner("Generating..."):
             result = call_hugging_face_api(image)
+
             # Display results (assuming the response contains image URLs)
             if 'generated_images' in result:
                 for idx, img_url in enumerate(result['generated_images']):

@@ -4,12 +4,23 @@ import numpy as np
 import cv2
 import easyocr
 
-# Preprocess the Image: Grayscale, Thresholding, and Noise Removal
+# Advanced Preprocessing: Grayscale, Adaptive Thresholding, Noise Removal, Denoising
 def preprocess_image(image):
+    # Convert to grayscale
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
-    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-    processed_image = cv2.medianBlur(thresh, 3)
-    return processed_image
+
+    # Apply adaptive thresholding to improve contrast
+    adaptive_thresh = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+    )
+
+    # Noise removal using a median filter
+    denoised_image = cv2.medianBlur(adaptive_thresh, 3)
+
+    # Optionally, apply further denoising if the text is not sharp
+    denoised_image = cv2.fastNlMeansDenoising(denoised_image, None, 30, 7, 21)
+
+    return denoised_image
 
 # OCR with EasyOCR
 def extract_text_easyocr(image):
@@ -30,15 +41,11 @@ if uploaded_file is not None:
     # Preprocess the image
     processed_image = preprocess_image(image)
     processed_pil_image = Image.fromarray(processed_image)
-    
+
     st.image(processed_pil_image, caption="Processed Image", use_column_width=True)
 
-    # Choose OCR engine (for now, we keep EasyOCR)
-    ocr_choice = st.selectbox("Choose OCR engine", ["EasyOCR"])
-
-    # Extract text based on OCR choice
-    if ocr_choice == "EasyOCR":
-        extracted_text = extract_text_easyocr(processed_pil_image)
+    # Extract text using EasyOCR
+    extracted_text = extract_text_easyocr(processed_pil_image)
 
     # Display extracted text
     st.subheader("Extracted Text:")

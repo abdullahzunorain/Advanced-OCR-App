@@ -7,7 +7,7 @@ def call_hugging_face_api(text):
     api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"
     headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
 
-    # Send a POST request to the Hugging Face API with text input
+    # Send a POST request to the Hugging Face API with the appropriate input
     response = requests.post(api_url, headers=headers, json={"inputs": text})
     return response.json()  # Return the API response as JSON
 
@@ -22,7 +22,7 @@ if st.button("Generate"):
         result = call_hugging_face_api(input_text)
 
         # Display results
-        if isinstance(result, dict) and 'generated_text' in result:
+        if 'generated_text' in result:
             st.write("Generated Text:")
             st.write(result['generated_text'])
         else:

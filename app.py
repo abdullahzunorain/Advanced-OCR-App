@@ -1,15 +1,24 @@
 import streamlit as st
 import requests
 import os
+import time
 
-# Function to call the GPT-Neo API
-def call_gptneo_api(text):
+# Function to call the GPT-Neo API with retry logic
+def call_gptneo_api(text, retries=3):
     api_url = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-125M"
     headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
 
-    # Send a POST request to the Hugging Face API
-    response = requests.post(api_url, headers=headers, json={"inputs": text})
-    return response.json()
+    for attempt in range(retries):
+        response = requests.post(api_url, headers=headers, json={"inputs": text})
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 503:  # Service Unavailable
+            st.warning("Model is currently loading, retrying...")
+            time.sleep(5)  # Wait before retrying
+        else:
+            return response.json()  # Return the error response
+
+    return {"error": "Failed to get a response from the model after multiple attempts."}
 
 # Streamlit app
 st.title("Hugging Face GPT-Neo Text Generation")

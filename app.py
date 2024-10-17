@@ -2,14 +2,15 @@ import streamlit as st
 import requests
 import os
 
-# Function to call the Hugging Face API
-def call_hugging_face_api(text):
-    api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"
+def call_gpt2_api(text):
+    api_url = "https://api-inference.huggingface.co/models/gpt2"
     headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
 
-    # Send a POST request to the Hugging Face API with the appropriate input
     response = requests.post(api_url, headers=headers, json={"inputs": text})
-    return response.json()  # Return the API response as JSON
+    return response.json()
+
+# Use this function in the same way as the previous call_hugging_face_api
+
 
 # Streamlit app
 st.title("Hugging Face Model Integration")

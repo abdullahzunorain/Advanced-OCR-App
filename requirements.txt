@@ -1,6 +1,3 @@
-streamlit
-pillow
-easyocr
-opencv-python
-transformers
 torch
+transformers
+Pillow

@@ -6,11 +6,26 @@ import os
 
 import os
 
+
+
 # Function to call the Hugging Face API
 def call_hugging_face_api(image):
-    api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"  # Your model's API URL
-    headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}  # Use environment variable for token
+    api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"
+    headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
 
+    # Prepare the image for sending
+    if image.mode != 'RGB':
+        image = image.convert('RGB')  # Convert to RGB if not already in that mode
+
+    buffered = BytesIO()
+    image.save(buffered, format="JPEG")
+    image_bytes = buffered.getvalue()
+
+    # Send a POST request to the Hugging Face API
+    response = requests.post(api_url, headers=headers, files={"file": image_bytes})
+    return response.json()
+
+    
 
     # Prepare the image for sending
     buffered = BytesIO()

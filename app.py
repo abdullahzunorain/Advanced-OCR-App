@@ -19,11 +19,12 @@ input_text = st.text_area("Enter text to generate next tokens:")
 
 if st.button("Generate"):
     with st.spinner("Generating..."):
-        result = call_gpt2_api(input_text)  # Call the correct function
+        result = call_gpt2_api(input_text)
 
         # Display results
-        if isinstance(result, dict) and 'generated_text' in result:
+        if isinstance(result, list) and len(result) > 0 and 'generated_text' in result[0]:
+            generated_text = result[0]['generated_text']  # Extract the generated text
             st.write("Generated Text:")
-            st.write(result['generated_text'])
+            st.write(generated_text)  # Display the extracted text
         else:
             st.error("Error: " + str(result))

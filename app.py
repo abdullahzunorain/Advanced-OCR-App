@@ -7,7 +7,7 @@ import os
 # Function to call the Hugging Face API
 def call_hugging_face_api(image):
     api_url = "https://api-inference.huggingface.co/models/BAAI/Emu3-Gen"  # Update with your model's API URL
-    headers = {"Authorization": f"Bearer {os.getenv('HUGGING_FACE_API_TOKEN')}"}  # Use environment variable for token
+    headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}  # Use environment variable for token
 
     # Prepare the image for sending
     buffered = BytesIO()

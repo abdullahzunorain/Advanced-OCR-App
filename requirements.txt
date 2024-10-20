@@ -1,5 +1,5 @@
 streamlit
-requests
-transformers
-torch  
+ transformers
+torch
+torchvision
 pillow

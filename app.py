@@ -1,7 +1,6 @@
 import streamlit as st
 from transformers import LayoutLMv3Processor, LayoutLMv3ForTokenClassification
 from PIL import Image
-import pytesseract
 import torch
 
 # Function to load the model and processor
@@ -20,10 +19,6 @@ processor, model = load_model()
 
 # Streamlit app title
 st.title("Image to Text Extraction Using LayoutLMv3")
-
-# Check if PyTesseract is available
-if not pytesseract.pytesseract.tesseract_cmd:
-    st.warning("Tesseract is not installed. Please ensure it is installed in your environment.")
 
 # Upload the image
 uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
@@ -46,13 +41,13 @@ if uploaded_file is not None:
         words = processor.tokenizer.convert_ids_to_tokens(encoding['input_ids'].squeeze().tolist())
 
         # Extract text and filter out special tokens
-        extracted_text = ""
+        extracted_text = []
         for word, class_id in zip(words, predicted_class_ids):
             if class_id > 0:  # Assuming class_id 0 is for the padding token
-                extracted_text += word + " "
+                extracted_text.append(word)
 
         # Display extracted text in a text area
-        st.text_area("Extracted Text", value=extracted_text.strip(), height=300)
+        st.text_area("Extracted Text", value=' '.join(extracted_text).strip(), height=300)
 
     except Exception as e:
         st.error(f"Error processing image: {e}")

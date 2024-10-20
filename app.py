@@ -1,22 +1,38 @@
 import streamlit as st
-import requests
-import easyocr
+from transformers import LayoutLMv3Processor, LayoutLMv3ForTokenClassification
+from PIL import Image
+import torch
 
-# Initialize EasyOCR reader
-reader = easyocr.Reader(['en'])
+st.title("Image to Text Extraction Using Hugging Face Model")
 
-st.title("Image to Text App")
+# Load the model and processor
+processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base")
+model = LayoutLMv3ForTokenClassification.from_pretrained("microsoft/layoutlmv3-base")
 
+# Upload the image
 uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-    # Optionally, process the image using EasyOCR
-    img = uploaded_file.read()
-    results = reader.readtext(img)
+    # Open the image
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    extracted_text = "\n".join([result[1] for result in results])
-    st.text_area("Extracted Text", value=extracted_text, height=300)
+    # Process the image
+    encoding = processor(image, return_tensors="pt")
 
-    # Or send the image to Groq API (pseudo-code)
-    # response = requests.post("https://api.groq.com/ocr", files={"file": uploaded_file})
-    # extracted_text = response.json().get("text", "")
+    with torch.no_grad():
+        outputs = model(**encoding)
+        logits = outputs.logits
+
+    # Get predicted classes
+    predicted_class_ids = logits.argmax(-1).squeeze().tolist()
+    tokens = encoding['input_ids'][0].tolist()
+    words = processor.tokenizer.convert_ids_to_tokens(tokens)
+
+    # Extract text from predicted classes
+    extracted_text = []
+    for word, predicted_class_id in zip(words, predicted_class_ids):
+        if predicted_class_id != 0:  # Filter out the padding class
+            extracted_text.append(word)
+
+    st.text_area("Extracted Text", value=" ".join(extracted_text), height=300)

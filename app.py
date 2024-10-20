@@ -1,13 +1,13 @@
 import streamlit as st
-from transformers import LayoutLMv3Processor, LayoutLMv3ForTokenClassification
+from transformers import DonutProcessor, VisionEncoderDecoderModel
 from PIL import Image
 import torch
 
-st.title("Image to Text Extraction Using Hugging Face Model")
+st.title("Image to Text Extraction Using Hugging Face Donut Model")
 
 # Load the model and processor
-processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base")
-model = LayoutLMv3ForTokenClassification.from_pretrained("microsoft/layoutlmv3-base")
+processor = DonutProcessor.from_pretrained("naver-clova-io/donut-base")
+model = VisionEncoderDecoderModel.from_pretrained("naver-clova-io/donut-base")
 
 # Upload the image
 uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
@@ -18,21 +18,12 @@ if uploaded_file is not None:
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
     # Process the image
-    encoding = processor(image, return_tensors="pt")
+    pixel_values = processor(image, return_tensors="pt").pixel_values
 
     with torch.no_grad():
-        outputs = model(**encoding)
-        logits = outputs.logits
+        outputs = model.generate(pixel_values)
 
-    # Get predicted classes
-    predicted_class_ids = logits.argmax(-1).squeeze().tolist()
-    tokens = encoding['input_ids'][0].tolist()
-    words = processor.tokenizer.convert_ids_to_tokens(tokens)
+    # Decode the generated output
+    extracted_text = processor.decode(outputs[0], skip_special_tokens=True)
 
-    # Extract text from predicted classes
-    extracted_text = []
-    for word, predicted_class_id in zip(words, predicted_class_ids):
-        if predicted_class_id != 0:  # Filter out the padding class
-            extracted_text.append(word)
-
-    st.text_area("Extracted Text", value=" ".join(extracted_text), height=300)
+    st.text_area("Extracted Text", value=extracted_text, height=300)

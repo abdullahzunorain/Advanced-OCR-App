@@ -1,30 +1,22 @@
 import streamlit as st
+import requests
 import easyocr
-from PIL import Image
-import numpy as np
 
-# Initialize the EasyOCR reader
-reader = easyocr.Reader(['en'])  # You can add other languages if needed
+# Initialize EasyOCR reader
+reader = easyocr.Reader(['en'])
 
-# Streamlit app layout
-st.title('Real-time OCR Text Extraction')
+st.title("Image to Text App")
 
-# File uploader to upload an image
-uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
-if uploaded_image:
-    # Display uploaded image
-    image = Image.open(uploaded_image)
-    st.image(image, caption='Uploaded Image', use_column_width=True)
+if uploaded_file is not None:
+    # Optionally, process the image using EasyOCR
+    img = uploaded_file.read()
+    results = reader.readtext(img)
 
-    # Convert image to numpy array
-    image_np = np.array(image)
+    extracted_text = "\n".join([result[1] for result in results])
+    st.text_area("Extracted Text", value=extracted_text, height=300)
 
-    # Extract text from the image using EasyOCR
-    with st.spinner('Extracting text...'):
-        results = reader.readtext(image_np)
-
-    # Display the extracted text
-    st.subheader('Extracted Text:')
-    for result in results:
-        st.write(result[1])
+    # Or send the image to Groq API (pseudo-code)
+    # response = requests.post("https://api.groq.com/ocr", files={"file": uploaded_file})
+    # extracted_text = response.json().get("text", "")

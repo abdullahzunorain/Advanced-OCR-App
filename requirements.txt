@@ -1,5 +1,5 @@
 streamlit
- transformers
+transformers
 torch
-torchvision
-pillow
+Pillow
+pytesseract
